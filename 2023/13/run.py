@@ -40,28 +40,26 @@ def is_reflection(array, idx):
     return array[0] == array[-1] and is_reflection(array[1:-1], idx - 1)
 
 
-def get_col_sym(grid):
+def get_col_syms(grid):
+    res = []
     for col_idx in range(len(grid[0]) - 1):
         if all(is_reflection(line, col_idx) for line in grid):
-            return col_idx
-    return -1
+            res.append(col_idx)
+    return res
 
 
-def get_line_sym(grid):
+def get_line_syms(grid):
+    res = []
     for row_idx in range(len(grid) - 1):
         if all(is_reflection(col, row_idx) for col in zip(*grid)):
-            return row_idx
-    return -1
+            res.append(row_idx)
+    return res
 
 
-def get_reflection(grid):
-    if (line_sym := get_line_sym(grid)) >= 0:
-        return (line_sym, -1)
-
-    if (col_sym := get_col_sym(grid)) >= 0:
-        return (-1, col_sym)
-
-    raise NoSymmetryFound()
+def get_reflections(grid):
+    return {(sym, -1) for sym in get_line_syms(grid)} | {
+        (-1, sym) for sym in get_col_syms(grid)
+    }
 
 
 def get_reflection_value(x, y):
@@ -69,16 +67,12 @@ def get_reflection_value(x, y):
 
 
 def get_reflection_smudge(grid):
-    init_ref = get_reflection(grid)
+    init_refs = get_reflections(grid)
     for x in range(len(grid)):
         for y in range(len(grid[0])):
-            try:
-                ref = get_reflection(alter(grid, x, y))
-                if ref != init_ref:
-                    return ref
-            except NoSymmetryFound:
-                continue
-
+            refs = get_reflections(alter(grid, x, y)) - init_refs
+            if ref := next((r for r in refs), None):
+                return ref
     raise NoSymmetryFound()
 
 
@@ -91,7 +85,9 @@ def alter(grid, x, y):
 
 def resolve1():
     grids = parse_input("input.txt")
-    return sum(get_reflection_value(*get_reflection(grid)) for grid in grids)
+    return sum(
+        get_reflection_value(*next(r for r in get_reflections(grid))) for grid in grids
+    )
 
 
 def resolve2():
@@ -109,12 +105,12 @@ def test_reflection():
     assert is_reflection(tuple("#.##..##."), 4)
 
     grids = parse_input("input_example.txt")
-    refs = [get_reflection(g) for g in grids]
+    refs = [get_reflections(g) for g in grids]
 
-    assert refs[0] == (-1, 4), refs[0]
-    assert refs[1] == (3, -1), refs[1]
+    assert refs[0] == {(-1, 4)}, refs[0]
+    assert refs[1] == {(3, -1)}, refs[1]
 
-    value = sum(get_reflection_value(*ref) for ref in refs)
+    value = sum(get_reflection_value(*next(r for r in ref)) for ref in refs)
     assert value == 405, value
 
     grids = parse_input("input_example.txt")
