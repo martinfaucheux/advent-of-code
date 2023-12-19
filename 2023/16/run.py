@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, deque
 from pathlib import Path
 
 Grid = list[list[str]]
@@ -32,17 +32,10 @@ def is_valid_position(grid: Grid, pos: Pos):
     return 0 <= x < len(grid) and 0 <= y < len(grid[x])
 
 
-def follow(
-    grid: Grid, pos: Pos, dir: Dir, visited: VisitList | None = None
-) -> VisitList:
-    if visited is None:
-        visited = defaultdict(set)
+def get_next(grid: Grid, pos: Pos, dir: Dir) -> list[tuple[Pos, Dir]]:
+    tuples = []
     x, y = pos
     val = grid[x][y]
-    print(sum(len(v) for v in visited.values()))
-
-    visited[pos].add(dir)
-    tuples = []
     match val:
         case ".":
             tuples.append((add_dir(pos, dir), dir))
@@ -72,10 +65,20 @@ def follow(
             tuples.append((add_dir(pos, new_dir), new_dir))
         case _:
             raise ValueError(f"Invalid char: {val}")
+    return tuples
 
-    for new_pos, new_dir in tuples:
-        if is_valid_position(grid, new_pos) and new_dir not in visited[new_pos]:
-            follow(grid, new_pos, new_dir, visited)
+
+def follow(grid: Grid, pos: Pos, dir: Dir) -> VisitList:
+    visited = defaultdict(set)
+    visited[pos].add(dir)
+
+    queue = deque([(pos, dir)])
+    while queue:
+        pos, dir = queue.popleft()
+        for new_pos, new_dir in get_next(grid, pos, dir):
+            if is_valid_position(grid, new_pos) and new_dir not in visited[new_pos]:
+                visited[new_pos].add(new_dir)
+                queue.append((new_pos, new_dir))
 
     return visited
 
@@ -92,14 +95,23 @@ def gprint(grid):
 
 
 def resolve1():
-    grid = parse_input("input_example3.txt")
+    grid = parse_input("input.txt")
     visited = follow(grid, (0, 0), 3)
+    return len(visited)
 
-    return visited
+
+def resolve2():
+    grid = parse_input("input.txt")
+
+    start_states = []
+    start_states.extend(((0, col), 2) for col in range(len(grid[0])))
+    start_states.extend(((row, len(grid[0]) - 1), 1) for row in range(len(grid)))
+    start_states.extend(((len(grid) - 1, col), 0) for col in range(len(grid[0])))
+    start_states.extend(((row, 0), 3) for row in range(len(grid)))
+
+    return max(len(follow(grid, pos, dir)) for pos, dir in start_states)
 
 
 if __name__ == "__main__":
-    grid = parse_input("input.txt")
-    visited = follow(grid, (0, 0), 3)
-
-    gprint(color(grid, visited))
+    print(resolve1())
+    print(resolve2())
