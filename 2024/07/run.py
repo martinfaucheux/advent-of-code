@@ -1,6 +1,8 @@
 from pathlib import Path
+from typing import Callable
+import operator
 
-OPERATIONS = "+*"
+Operation = Callable[[int, int], int]
 
 
 def parse_input(path: str):
@@ -16,53 +18,86 @@ def parse_input(path: str):
     ]
 
 
-def get_bin(_int: int, padding: int | None = None) -> str:
-    res = bin(_int)[2:]
+def get_base_notation(number: int, base: int = 2) -> list[int]:
+    if number == 0:
+        return []
 
-    if padding is not None:
-        res = "0" * (padding - len(res)) + res
+    result = []
+    is_negative = number < 0
+    number = abs(number)
 
-    return res
+    while number > 0:
+        result = [number % base] + result
+        number //= base
+
+    if is_negative:
+        result = "-" + result
+
+    return result
 
 
-def is_valid_equation(exp_res: int, operands: list[int]) -> bool:
+def get_base_notation_with_padding(number: int, base: int, padding: int) -> list[int]:
+    res = get_base_notation(number, base)
+    return [0] * (padding - len(res)) + res
+
+
+def is_valid_equation(
+    exp_res: int, operands: list[int], operations: list[Operation]
+) -> bool:
     operator_count = len(operands) - 1
+    base = len(operations)
 
-    for option in range(2**operator_count):
-        if process_line(operands, get_bin(option, operator_count)) == exp_res:
+    for option in range(base**operator_count):
+        if (
+            process_line(
+                operands,
+                get_base_notation_with_padding(option, base, operator_count),
+                operations,
+            )
+            == exp_res
+        ):
             return True
     return False
 
 
-def process_line(operands: list[int], op_mask: str) -> int:
-    print(op_mask)
+def process_line(
+    operands: list[int], op_mask: list[int], operations: list[Operation]
+) -> int:
     res = operands[0]
-    for b, operand in zip(op_mask, operands[1:]):
-        if b == "0":
-            res *= operand
-        elif b == "1":
-            res += operand
-        else:
-            raise ValueError(f"invalid value {b}")
+    for op_id, operand in zip(op_mask, operands[1:]):
+        op = operations[op_id]
+        res = op(res, operand)
     return res
+
+
+def concatenate(a: int, b: int) -> int:
+    return int(str(a) + str(b))
 
 
 def resolve1():
     lines = parse_input("input.txt")
 
+    operations = [operator.add, operator.mul]
+
     res = 0
     for exp_res, operands in lines:
-        print(exp_res, operands)
-        if is_valid_equation(exp_res, operands):
+        if is_valid_equation(exp_res, operands, operations):
             res += exp_res
 
     return res
 
 
 def resolve2():
-    lines = parse_input("input_example.txt")
+    lines = parse_input("input.txt")
 
-    return 0
+    operations = [operator.add, operator.mul, concatenate]
+
+    res = 0
+    for exp_res, operands in lines:
+        if is_valid_equation(exp_res, operands, operations):
+            res += exp_res
+
+    return res
 
 
 if __name__ == "__main__":
