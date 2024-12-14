@@ -3,6 +3,7 @@ from enum import Enum
 from copy import deepcopy
 from operator import or_
 from functools import reduce
+from collections import defaultdict
 
 Pos = tuple[int, int]
 
@@ -29,6 +30,10 @@ def get_group(grid: list[str], pos: Pos) -> tuple[set[Pos], int]:
         seen.add(current)
         for dx, dy in DIRECTIONS:
             tx, ty = (current[0] + dx, current[1] + dy)
+
+            if current == (2, 1) and (dx, dy) == (0, 1):
+                pass
+
             if (tx, ty) not in seen:
                 if is_valid_pos(grid, (tx, ty)) and grid[tx][ty] == value:
                     seen.add((tx, ty))
@@ -41,31 +46,38 @@ def get_group(grid: list[str], pos: Pos) -> tuple[set[Pos], int]:
 
                     # 2. can the new edge be the prolongation of existing edges?
 
-                    joints = {
-                        e: joint
-                        for e in edges
-                        if (joint := e.get_joint(edge)) is not None
-                    }
+                    joints = get_all_joints(edge, edges)
 
-                    all_intersections = {
-                        inter
-                        for e in edges
-                        for adj in joints.keys()
-                        if (inter := adj.get_intersection(e)) is not None
-                    }
+                    all_intersections = get_all_intersections(joints.keys(), edges)
 
                     # keep only joins where there is no existing intersection
                     adjacent_edges = {
                         e
-                        for e, joint in joints.items()
-                        if joint not in all_intersections
+                        for e, joints in joints.items()
+                        if not (joints & all_intersections)
                     }
 
                     new_edge = Edge.merge(edge, *adjacent_edges)
                     edges -= adjacent_edges
-                    edges = insert_edge(new_edge, edges)
-
+                    edges.add(new_edge)
     return seen, edges
+
+
+def get_all_joints(edge: "Edge", edges: "set[Edge]") -> "dict[Edge, set[Pos]]":
+    res = defaultdict(set)
+    for other in edges:
+        if (inter := edge.get_joint(other)) is not None:
+            res[other].add(inter)
+    return res
+
+
+def get_all_intersections(el1: "set[Edge]", el2: "set[Edge]") -> set[Pos]:
+    res = set()
+    for e1 in el1:
+        for e2 in el2:
+            if (inter := e1.get_intersection(e2)) is not None:
+                res.add(inter)
+    return res
 
 
 def many_cuts(edge: "Edge", edges: "set[Edge]") -> "set[Edge]":
@@ -75,27 +87,12 @@ def many_cuts(edge: "Edge", edges: "set[Edge]") -> "set[Edge]":
     """
     edges = deepcopy(edges)
     intersetions = {
-        other: inter
-        for other in edges
-        if (inter := edge.get_intersection(other, exclude_ends=True)) is not None
+        e: inter
+        for e in edges
+        if (inter := edge.get_intersection(e, exclude_ends=True)) is not None
     }
     edges -= {e for e in intersetions.keys()}
     return reduce(or_, (e.split(inter) for e, inter in intersetions.items()), edges)
-
-
-def insert_edge(edge: "Edge", edges: "set[Edge]") -> "set[Edge]":
-    edges = deepcopy(edges)
-    intersection_map: "dict[Edge, Pos]" = {}
-    for e2 in edges:
-        if (intersection := edge.get_intersection(e2)) is not None:
-            intersection_map[edge] = intersection
-
-    edges -= set(intersection_map.keys())
-    for e2, intersection in intersection_map.items():
-        edges |= e2.split(intersection)
-
-    edges |= edge.split_many(*intersection_map.values())
-    return edges
 
 
 def get_edge_between(pos: Pos, dir: Pos) -> "Edge":
@@ -172,7 +169,7 @@ class Edge:
         return None
 
     def get_intersection(self, other: "Edge", exclude_ends=False) -> Pos | None:
-        if self.type != other.type:
+        if self.type == other.type:
             return None
 
         h, v = (self, other) if self.type == EdgeType.HORIZONTAL else (other, self)
@@ -192,19 +189,6 @@ class Edge:
             return {self}
 
         return {Edge(self.p1, pos), Edge(pos, self.p2)}
-
-    def split_many(self, *pos_list) -> "set[Edge]":
-        pos_list = sorted(deepcopy(pos_list))
-        res = set()
-        right = self
-        while pos_list:
-            pos = pos_list.pop(0)
-            splitted = right.split(pos)
-            if len(splitted) == 2:
-                left, right = sorted(list(splitted))
-                res.add(left)
-        res.add(right)
-        return res
 
     @property
     def type(self) -> EdgeType:
@@ -234,21 +218,6 @@ def is_valid_pos(grid: list[str], pos: Pos) -> bool:
     return (x >= 0) and (x < len(grid)) and (y >= 0) and (y < len(grid[x]))
 
 
-# def draw_grid(grid, edges):
-#     n = len(grid)
-#     dn = 2 * n + 1
-#     res = "\n".join(["." * dn] * dn)
-
-#     for x in range(n):
-#         for y in range(n):
-#             res[2 * x + 1][2*y+1] = grid[x][y]
-
-#     for edge in edges:
-#         if edge.type == EdgeType.HORIZONTAL:
-#             # x constant
-#             for y in range(edge.p1[1], edge.p2[1]):
-
-
 def resolve1():
     grid = parse_input("input.txt")
     seen: set[Pos] = set()
@@ -263,7 +232,7 @@ def resolve1():
 
 
 def resolve2():
-    grid = parse_input("input_example.txt")
+    grid = parse_input("input.txt")
     seen: set[Pos] = set()
     res = 0
     for x in range(len(grid)):
@@ -278,6 +247,3 @@ def resolve2():
 if __name__ == "__main__":
     print(resolve1())
     print(resolve2())
-
-    # 865906
-    # too low
