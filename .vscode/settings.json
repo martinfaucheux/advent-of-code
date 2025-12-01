@@ -1,0 +1,8 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./2025/01/Cargo.toml"
+        // Add more Cargo.toml paths as you create more Rust projects
+        // "./2024/03/Cargo.toml",
+        // etc.
+    ]
+}
