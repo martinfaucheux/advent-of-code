@@ -3,6 +3,7 @@ use std::io::prelude::*;
 
 fn main() {
     part1();
+    part2();
 }
 
 enum Direction {
@@ -47,6 +48,44 @@ fn part1() {
 
         if position == 0 {
             counter += 1;
+        }
+    }
+
+    println!("{}", counter);
+}
+
+fn part2() {
+    let file_content = get_text("input.txt");
+    let rotations = extract_rotations(&file_content);
+
+    let mut counter: u32 = 0;
+    let mut position: i32 = 50;
+    println!("The dial starts by pointing at 50");
+    for rotation in rotations {
+        let pointed_at_zero: bool;
+        let disp = match rotation.dir {
+            Direction::Left => -1,
+            Direction::Right => 1,
+        } * rotation.degrees as i32;
+        let initial_position = position;
+        position = position + disp;
+
+        if initial_position != 0 && (position <= 0 || position >= 100) {
+            pointed_at_zero = true;
+            counter += 1;
+        } else {
+            pointed_at_zero = false;
+        }
+
+        position = position.rem_euclid(100);
+
+        if pointed_at_zero {
+            println!(
+                "The dial is rotated to point at {}. During this rotation, it points at 0 once.",
+                position
+            );
+        } else {
+            println!("The dial is rotated to point at {}", position);
         }
     }
 
