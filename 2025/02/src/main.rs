@@ -3,9 +3,25 @@ use std::io::prelude::*;
 
 fn main() {
     part1();
+    part2();
 }
 
 fn part1() {
+    let file_content = get_text("input.txt");
+    let tuples = get_tuples(&file_content);
+
+    let mut count: u64 = 0;
+    for (start, end) in tuples {
+        for n in start..(end + 1) {
+            if is_repeating_twice(n) {
+                count += n;
+            }
+        }
+    }
+    println!("{}", count);
+}
+
+fn part2() {
     let file_content = get_text("input.txt");
     let tuples = get_tuples(&file_content);
 
@@ -17,8 +33,22 @@ fn part1() {
             }
         }
     }
-
     println!("{}", count);
+}
+
+fn is_repeating_twice(n: u64) -> bool {
+    if n < 11 {
+        return false;
+    }
+    let str_n = n.to_string();
+    let length = str_n.chars().count();
+    for i in 1..(length / 2 + 1) {
+        if str_n[..i] == str_n[i..] {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 fn is_repeating(n: u64) -> bool {
@@ -26,8 +56,22 @@ fn is_repeating(n: u64) -> bool {
         return false;
     }
     let str_n = n.to_string();
-    for i in 1..(str_n.chars().count()) {
-        if str_n[..i] == str_n[i..] {
+    let length = str_n.chars().count();
+    for i in 1..(length / 2 + 1) {
+        if !(length % i == 0) {
+            continue;
+        }
+
+        let m = length / i;
+        let mut failed = false;
+        for j in 1..m {
+            if str_n[..i] != str_n[j * i..((j + 1) * i)] {
+                failed = true;
+                break;
+            }
+        }
+
+        if !failed {
             return true;
         }
     }
