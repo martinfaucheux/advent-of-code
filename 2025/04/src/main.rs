@@ -3,6 +3,7 @@ use std::io::prelude::*;
 
 fn main() {
     part1();
+    part2();
 }
 
 fn part1() {
@@ -10,11 +11,38 @@ fn part1() {
     let grid = to_grid(&file_content);
     let mut sum = 0;
     let size = (grid.len(), grid[0].len());
-    for x in 0..grid.len() {
-        for y in 0..grid[0].len() {
+    for x in 0..size.0 {
+        for y in 0..size.1 {
             if grid[x][y] == 1 && count_neighbors(&grid, x, y, size.0, size.1) < 4 {
                 sum += 1;
             }
+        }
+    }
+    println!("{}", sum);
+}
+
+fn part2() {
+    let file_content = get_text("input.txt");
+    let mut grid = to_grid(&file_content);
+    let mut sum = 0;
+    let size = (grid.len(), grid[0].len());
+
+    loop {
+        let mut found = false;
+
+        for x in 0..grid.len() {
+            for y in 0..grid[0].len() {
+                if grid[x][y] == 1 && count_neighbors(&grid, x, y, size.0, size.1) < 4 {
+                    sum += 1;
+
+                    grid[x][y] = 0;
+                    found = true;
+                }
+            }
+        }
+
+        if !found {
+            break;
         }
     }
     println!("{}", sum);
